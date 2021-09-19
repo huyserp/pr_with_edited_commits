@@ -1,64 +1,68 @@
-  ### This script is not finished.  While I am familiar with rspec, can read and understand already written tests,
-  ### and can run rake to execute rspec tests and understand the terminal output, I am unable to write rspec tests
-  ### at this time (have not learned yet). For this reason I cannot test the below code.
-  ### I also cannot run it as it would take at least 16 hours with more thank 27,000 PRs to check in the rails repo.
-
-  ### I know there are exceptions that are not addressed in the below code. Among others, I just discovered that its
-  ### possible for a PR with 2 commits to only lists one changed file. This disrupts my approach and now requires
-  ### heavy refactoring.
-
-  ### At the very least I've tried to express my thought process in approaching this task and you can hopefully see the
-  ### direction I was going.
+# We believe that commits in a proper pull request stand on their own. There should be no “editing
+# history”, meaning that each changed row in each file should only be affected by a single commit
+# only.
+# Provide a github link of your solution for the following:
+# Crawl the rails/rails github repo and list all the pull requests where there are rows in files
+# affected by multiple commits. Please provide links to the specific rows as well.
 
 require 'pry'
 require 'open-uri'
 require 'nokogiri'
+require_relative 'pr_links'
 
-# the first PR has an id of 4
-rails_pr_id = 4
-rails_pr_url = "https://github.com/rails/rails/pull/#{rails_pr_id}/files"
+pr_url = '/rails/rails/pull/43240'
+pr_doc = Nokogiri::HTML(URI.open("https://github.com#{pr_url}").read)
+number_of_commits = pr_doc.search('#commits_tab_counter').text.strip.to_i
 
-rails_gh_pr_index_decs_url = "https://github.com/rails/rails/pulls?q=is%3Apr+sort%3Acreated-desc"
-pr_index_page_document = Nokogiri::HTML(URI.open(rails_gh_pr_index_decs_url).read)
-last_rails_pr_id = pr_index_page_document.search('span.opened-by').first.text.strip.slice(1..5)
+# If there is only one commit in this PR, move on to next pr_url
+# next if number_of_commits < 2
 
-resulting_pull_requests_with_link = {}
-loop do
-  break if rails_pr_id > last_rails_pr_id # There are no more Pull Requests
-
-  begin
-    html_file = URI.open(rails_gh_url).read
-  rescue OpenURI::HTTPError
-    sleep 2
-    next #this pr_id doesnt exist resulting in 404 - go to next pr_id
-  elsif rails_pr_url.includes('/issues/')
-    sleep 2
-    next #some urls with /pull/#{rails_pr_id} redirect to "issues", we don't want this
-  else
-    html_doc = Nokogiri::HTML(html_file)
-  end
-
-  changed_files_list = []
-
-  # the 6th element (becoming the 1st) is the name of the PR - all elements following are files changed in this PR
-  html_doc.search('a.Link--primary')[6..].each do |element|
-    changed_files_list << element.text.strip
-  end
-
-  #reduce the list of files to only those (or the one) that are duplicated / has a duplicate (if they exist at all)
-  duplicated_files = changed_files_list.group_by { |file| file }.select { |key, value| value.size > 1 }.map(&:first)
-
-  # if the length of each list of files is the same, then the same file wasn't manipulated twice within the PR, move on.
-  next if duplicated_files.empty?
-
-  # The following PRs have at least one file changed more than once
-  # Parse for the lines of code changed in each file and store them in a hash as the value to the corresponding filename key
-  # Compare for same lines being changed in the keys of this hash
-  # If there is a match, save the the PR name (the frist element in changed_files_list) as the key in resulting_pull_requests_with_link
-  # and the current rails_pr_url being used in this iteration as it's value.
-  # else if no matching lines of code:
-  rails_pr_id += 1
+pr_hash = {}
+pr_hash["PR_title"] = pr_doc.search('span.js-issue-title.markdown-title').text.strip
+pr_hash["commits"] = []
+sleep 2
+pr_commits_doc = Nokogiri::HTML(URI.open("https://github.com#{pr_url}/commits").read)
+commits = pr_commits_doc.search('div#commits_bucket > div > div > div > div:nth-child(2) > ol > li > div > p > a')
+commits.each do |commit|
+  commit_hash = {}
+  commit_hash["commit_title"] = commit.text.strip
+  commit_hash['commit_url'] = commit['href']
+  commit_hash['files'] = []
   sleep 2
-end
+  commit_doc = Nokogiri::HTML(URI.open("https://github.com#{commit['href']}").read)
+  # This must be #search twice as each filename link is under a different, unique div#id get the parent, then the nested child
+  files = commit_doc.search('div.js-diff-progressive-container > div').search('div > div > a')
 
-return resulting_pull_requests_with_link
+  files.each do |file|
+    file_hash = {}
+    file_hash["Filename"] = file.text.strip
+    file_hash["file_url"] = file['href']
+    file_hash["changed_lines"] = []
+    sleep 2
+    changed_lines_doc = Nokogiri::HTML(URI.open("https://github.com#{commit['href']}#{file['href']}").read)
+    data_diff_anchor = file['href']
+    data_diff_anchor.slice!(0)
+    line_deletion = changed_lines_doc.search("table[data-diff-anchor='#{data_diff_anchor}'] td.blob-num.blob-num-deletion.js-linkable-line-number")
+    unless line_deletion.empty?
+      line_deletion = line_deletion.map { |line| line['data-line-number'].to_i }
+      file_hash['changed_lines'] << line_deletion
+    end
+    line_addition = changed_lines_doc.search("table[data-diff-anchor='#{data_diff_anchor}'] td.blob-num.blob-num-addition.js-linkable-line-number")
+    unless line_addition.empty?
+      line_addition = line_addition.map { |line| line['data-line-number'].to_i }
+      file_hash['changed_lines'] << line_addition
+    end
+    commit_hash['files'] << file_hash
+  end
+  pr_hash["commits"] << commit_hash
+end
+binding.pry
+
+
+puts pr_hash
+
+
+
+
+
+
