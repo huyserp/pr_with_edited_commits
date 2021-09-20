@@ -5,10 +5,12 @@ Crawl the rails/rails github repo and list all the pull requests where there are
 affected by multiple commits. Please provide links to the specific rows as well.
 ____________________________________________________________________________________________
 
-My solution is made of 3 main parts:
+My solution is made up of 3 main parts:
 1. fetching the URL for all pull requests in the rails/rails repo - represented in the pr_links.rb file.
 2. parsing the HTML from each pull request link gathered in step one to create a data structure (JSON), allowing for easier comparison of data. The structure
    created looks like this below:
+   
+   ```
    
    {
       "PR_title": "Sample pull request title for example",
@@ -31,7 +33,8 @@ My solution is made of 3 main parts:
         }
       ]
     }
-  
+    
+    ```
     negative changed lines are, of course, not negative lines of code, but represent deletions from the file. positive line numbers are additions.
   
 3. Reviewing the data just parsed and organized from the html and determining if there are files that have lines of code changed in more than one commit within the pull request.
@@ -48,9 +51,12 @@ HOWEVER - I have run and tested each block of code which makes up this complete 
 
 I've run the whole script for the test case with `pr_url = '/rails/rails/pull/43240'` which actually is a pull request that meets the criteria of the prompt
 and returns an array with PR title and relevant links: 
+```
 
 [ 
   'Override schema_format per database via configuration', 
   'https://github.com/rails/rails/pull/43240/commits/d07a101183bc97d0ff4507ff592f74f303997d7f#diff-cb5c658a1aa7877862198142775880b76b1d327ade6fd39f7c29a080535de6b7R498',
   'https://github.com/rails/rails/pull/43240/commits/d07a101183bc97d0ff4507ff592f74f303997d7f#diff-cb5c658a1aa7877862198142775880b76b1d327ade6fd39f7c29a080535de6b7R500'
 ]
+
+```
