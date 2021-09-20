@@ -91,7 +91,6 @@ pull_request_links_in_rails_repo.each do |pr_url|
         nums.each do |num|
           num.positive? ? links_to_shared_lines << "#{hash['file_url']}R#{num}" : links_to_shared_lines << "#{hash['file_url']}L#{num.abs}"
         end
-        binding.pry
       end
     end
   end
