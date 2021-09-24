@@ -15,23 +15,28 @@ def find_last_pr_url
 end
 
 ### SECOND: LOOP THROUGH INDEX OF PULL REQUEST PAGES TO GET THE HREF FOR EACH LINK
-def get_pr_links(index_page_number)
+def get_pr_links#(index_page_number)
   all_pr_links = []
 
-  loop do
+  #Instead of loop do, I set the get_pr_links method to only get links for the first 5 pages (125 Pull Requests)
+  pr_index_page_numbers = (1..5).to_a
+
+  pr_index_page_numbers.each do |page_number|
     # We start form the frist PR and go toward the last - the base url is 'created-asc'
     # I tried to add a 'limit=100' parameter in the url to show 100 records instead of just 25,
     # decreasing the number of pages to loop through, but it wasnt accepted.
-    base_url = "https://github.com/rails/rails/pulls?page=#{index_page_number}&q=is%3Apr+sort%3Acreated-asc"
+    base_url = "https://github.com/rails/rails/pulls?page=#{page_number}&q=is%3Apr+sort%3Acreated-asc"
     current_index_doc = Nokogiri::HTML(URI.open(base_url).read)
     urls_on_current_index = current_index_doc.search(PR_ELEMENT_PATH).map { |element| element['href'] }
     all_pr_links += urls_on_current_index
-    break if all_pr_links.last == find_last_pr_url
-    index_page_number += 1
-    sleep 3
+    # break if all_pr_links.last == find_last_pr_url
+    #index_page_number += 1
+    sleep 1
   end
+  all_pr_links.delete_at(2)
   all_pr_links
 end
+
 
 ### Test below to confirm the loop breaks where it should - starts on second to last page (1122)
 ### so as not to run through all the index pages.
